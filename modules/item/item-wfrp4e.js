@@ -1065,53 +1065,70 @@ export default class ItemWfrp4e extends Item {
     return value
   }
 
-  /**
-   * Turns a formula into a processed string for display
-   * 
-   * Turns a spell attribute such as "Willpower Bonus Rounds" into a more user friendly, processed value
-   * such as "4 Rounds". If the aoe is checked, it wraps the result in AoE (Result).
-   * 
-   * @param   {String}  formula   Formula to process - "Willpower Bonus Rounds" 
-   * @param   {boolean} aoe       Whether or not it's calculating AoE (changes string return)
-   * @returns {String}  formula   processed formula
-   */
-  computeSpellPrayerFormula(type, aoe = false, formulaOverride) {
-    try {
+  /*
+	 * Turns a formula into a processed string for display
+	 * 
+	 * Turns a spell attribute such as "Willpower Bonus Rounds" into a more user friendly, processed value
+	 * such as "4 Rounds". If the aoe is checked, it wraps the result in AoE (Result).
+	 * 
+	 * @param   {String}  formula   Formula to process - "Willpower Bonus Rounds" 
+	 * @param   {boolean} aoe       Whether or not it's calculating AoE (changes string return)
+	 * @returns {String}  formula   processed formula
+	 */
+	computeSpellPrayerFormula(type, aoe = false, formulaOverride)
+	{
+		try
+		{
+			let formula = formulaOverride || this[type]?.value
+			
+			// Check if formula contains numbers
+			if(formula.match(/(\d+)/))
+				return formula
 
-    let formula = formulaOverride || this[type]?.value
-    if (Number.isNumeric(formula))
-      return formula
+			formula = formula.toLowerCase();
 
-    formula = formula.toLowerCase();
+			// Do not process these special values
+			if(formula != game.i18n.localize("You").toLowerCase() && formula != game.i18n.localize("Special").toLowerCase() && formula != game.i18n.localize("Instant").toLowerCase() && formula != game.i18n.localize("Contact").toLowerCase())
+			{
+				let characteristicName = "";
+				let actorCharacteristic = "";
+		  
+				// Iterate through characteristics
+				for(let ch in this.actor.characteristics)
+				{
+					let newCharacteristicName = game.wfrp4e.config.characteristics[ch].toLowerCase();
+					
+					// If characteristic name is included in formula and it is longer than previous match
+					if(formula.includes(newCharacteristicName) && newCharacteristicName.length > characteristicName.length)
+					{
+						characteristicName = newCharacteristicName;
+						actorCharacteristic = this.actor.characteristics[ch];
+					}
+				}
+				
+				// If a match has been found...
+				if(actorCharacteristic)
+				{
+					// Determine if it's looking for the characteristic's bonus or its value
+					if(formula.includes('bonus'))
+						formula = actorCharacteristic.bonus + " " + formula.split(" ").pop();
+					else
+						formula = actorCharacteristic.value + " " + formula.split(" ").pop();
+				}
+			}
 
-    // Do not process these special values
-    if (formula != game.i18n.localize("You").toLowerCase() && formula != game.i18n.localize("Special").toLowerCase() && formula != game.i18n.localize("Instant").toLowerCase()) {
-      // Iterate through characteristics
-      for (let ch in this.actor.characteristics) {
-        // If formula includes characteristic name
-        if (formula.includes(game.wfrp4e.config.characteristics[ch].toLowerCase())) {
-          // Determine if it's looking for the bonus or the value
-          if (formula.includes('bonus'))
-            formula = formula.replace(game.wfrp4e.config.characteristics[ch].toLowerCase().concat(" bonus"), this.actor.characteristics[ch].bonus);
-          else
-            formula = formula.replace(game.wfrp4e.config.characteristics[ch].toLowerCase(), this.actor.characteristics[ch].value);
-        }
-      }
-    }
+			// If AoE - wrap with AoE ( )
+			if(aoe)
+				formula = "AoE (" + formula.capitalize() + ")";
 
-    // If AoE - wrap with AoE ( )
-    if (aoe)
-      formula = "AoE (" + formula.capitalize() + ")";
-
-    return formula.capitalize();
-    }
-    catch(e)
-    {
-      console.log("Error computing spell or prayer formulua: " + this.name)
-      return 0
-    }
-
-  }
+			return formula.capitalize();
+		}
+		catch(e)
+		{
+		  console.log("Error computing spell or prayer formulua: " + this.name)
+		  return 0
+		}
+	}
 
   /**
  * Turns a formula into a processed string for display
